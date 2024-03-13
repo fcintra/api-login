@@ -11,9 +11,15 @@ class UserRepository {
     return prisma.user.findMany();
   }
 
-  public async getById(id: number): Promise<User | null> {
+  public async getById(id: string): Promise<User | null> {
     return prisma.user.findUnique({
       where: { id },
+    });
+  }
+
+  public async getByEmail(email: string): Promise<User | null> {
+    return prisma.user.findUnique({
+      where: { email },
     });
   }
 
@@ -21,14 +27,14 @@ class UserRepository {
     return prisma.user.create({ data });
   }
 
-  public async update(id: number, data: Partial<User>): Promise<User | null> {
+  public async update(id: string, data: Partial<User>): Promise<User | null> {
     return prisma.user.update({
       where: { id },
       data,
     });
   }
 
-  public async delete(id: number): Promise<User | null> {
+  public async delete(id: string): Promise<User | null> {
     return prisma.user.delete({
       where: { id },
     });
