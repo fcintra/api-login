@@ -4,9 +4,9 @@
     "description": "",
     "main": "index.js",
     "scripts": {
-      "start": "ts-node-dev src/http/server.ts",
+      "start": "ts-node-dev src/server.ts",
       "test": "jest --no-cache",
-      "dev": "tsx watch src/http/server.ts"
+      "dev": "tsx watch src/server.ts"
     },
     "keywords": [],
     "author": "",
