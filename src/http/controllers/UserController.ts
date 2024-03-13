@@ -2,6 +2,7 @@
 
 import bcrypt from 'bcrypt';
 import { Request, Response } from 'express';
+import HttpStatusCode from '../../enum/HttpStatusCode';
 import UserRepository from '../../repositories/UserRepository';
 import { isValidEmail } from '../../utils/validateEmail';
 
@@ -110,8 +111,24 @@ class UserController {
     }
   }
 
-  public delete(req: Request, res: Response): void {
-    
+  public async delete(req: Request, res: Response) {
+    const {id} = req.params
+    try{
+      const verifyIfExistsUser = await userRepository.getById(id)
+
+      if(!verifyIfExistsUser){
+        res.status(404).json({ error: 'Usuário não encontrado' });
+        return;
+      }
+
+      const result = await userRepository.delete(id);
+
+      res.status(HttpStatusCode.NO_CONTENT).json(result)
+    } catch (error){
+      console.error('Erro ao atualizar usuário:', error);
+      res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+
   }
 }
 
