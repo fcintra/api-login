@@ -1,4 +1,3 @@
-// server.ts
 
 import express from 'express';
 import routes from './http/routes';
