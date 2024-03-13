@@ -2,31 +2,53 @@
 
 import bcrypt from 'bcrypt';
 import { Request, Response } from 'express';
-import HttpStatusCode from '../../enum/HttpStatusCode';
+import HttpStatusCode from '../../enums/HttpStatusCode';
+import ErrorLogRepository from '../../repositories/ErrorLogRepository';
 import UserRepository from '../../repositories/UserRepository';
 import { isValidEmail } from '../../utils/validateEmail';
 
 
 
 const userRepository = new UserRepository();
+const errorLogRepository = new ErrorLogRepository();
 
 class UserController {
   public async index(req: Request, res: Response): Promise<void> {
     try {
-        const users = await userRepository.getAll(); // Fetch all users
-        res.json(users); // Send the users as a response
+        const users = await userRepository.getAll();
+        res.json(users); 
       } catch (error) {
-        res.status(500).json({ error: 'Internal Server Error' }); // Handle errors gracefully
+          console.error('Internal Server Error:', error);
+          try {
+            await errorLogRepository.create('Internal Server Error', error.message, error.stack);
+          } catch (dbError) {
+            console.error('Error saving error log to database:', dbError);
+          }
+        
+          res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).json({ error: 'Internal Server Error' }); 
       }
   }
 
   public async show(req: Request, res: Response): Promise<void> {
     const {id} = req.params
     try {
+        const existingUser = await userRepository.getById(id);
+        if (!existingUser) {
+          res.status(400).json({ error: 'Usuário não encontrado' });
+          return;
+        }
+
         const users = await userRepository.getById(id); 
         res.json(users); 
       } catch (error) {
-        res.status(500).json({ error: 'Internal Server Error' });
+          console.error('Internal Server Error:', error);
+          try {
+            await errorLogRepository.create('Internal Server Error', error.message, error.stack);
+          } catch (dbError) {
+            console.error('Error saving error log to database:', dbError);
+          }
+        
+          res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).json({ error: 'Internal Server Error' }); 
       }
   }
 
@@ -51,7 +73,7 @@ class UserController {
     try {
         const existingUser = await userRepository.getByEmail(email);
         if (existingUser) {
-          res.status(400).json({ error: 'Este e-mail já está cadastrado' });
+          res.status(HttpStatusCode.CONFLICT).json({ error: 'Usuário já existe' });
           return;
         }
 
@@ -60,7 +82,14 @@ class UserController {
         const user = await userRepository.create({ firstName, lastName, email, password: hashedPassword });
         res.status(201).json(user);
     } catch (error) {
-        res.status(500).json({ error: 'Erro interno do servidor' });
+        console.error('Internal Server Error:', error);
+        try {
+          await errorLogRepository.create('Internal Server Error', error.message, error.stack);
+        } catch (dbError) {
+          console.error('Error saving error log to database:', dbError);
+        }
+      
+        res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).json({ error: 'Internal Server Error' }); 
     }
   }
 
@@ -69,7 +98,6 @@ class UserController {
     const { firstName, lastName, email, password } = req.body;
 
     try {
-      // Verificar se o usuário existe
       const existingUser = await userRepository.getById(userId);
       if (!existingUser) {
         res.status(404).json({ error: 'Usuário não encontrado' });
@@ -99,24 +127,30 @@ class UserController {
         firstName: firstName || existingUser.firstName,
         lastName: lastName || existingUser.lastName,
         email: email || existingUser.email,
-        password: password ? await bcrypt.hash(password, 10) : existingUser.password // Atualizar senha apenas se fornecida
+        password: password ? await bcrypt.hash(password, 10) : existingUser.password 
       };
 
       const updatedUser = await userRepository.update(userId, updatedUserData);
 
       res.status(200).json(updatedUser);
     } catch (error) {
-      console.error('Erro ao atualizar usuário:', error);
-      res.status(500).json({ error: 'Erro interno do servidor' });
+        console.error('Internal Server Error:', error);
+        try {
+          await errorLogRepository.create('Internal Server Error', error.message, error.stack);
+        } catch (dbError) {
+          console.error('Error saving error log to database:', dbError);
+        }
+      
+        res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).json({ error: 'Internal Server Error' }); 
     }
   }
 
   public async delete(req: Request, res: Response) {
     const {id} = req.params
     try{
-      const verifyIfExistsUser = await userRepository.getById(id)
+      const existingUser = await userRepository.getById(id)
 
-      if(!verifyIfExistsUser){
+      if(!existingUser){
         res.status(404).json({ error: 'Usuário não encontrado' });
         return;
       }
@@ -124,9 +158,17 @@ class UserController {
       const result = await userRepository.delete(id);
 
       res.status(HttpStatusCode.NO_CONTENT).json(result)
-    } catch (error){
-      console.error('Erro ao atualizar usuário:', error);
-      res.status(500).json({ error: 'Erro interno do servidor' });
+    } catch (error) {
+      // Log do erro no console para depuração
+        console.error('Internal Server Error:', error);
+        try {
+          // Salvar o erro no banco de dados usando o Prisma
+          await errorLogRepository.create('Internal Server Error', error.message, error.stack);
+        } catch (dbError) {
+          // Se houver um erro ao salvar o registro de erro no banco, registre-o no console
+          console.error('Error saving error log to database:', dbError);
+        }
+        res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).json({ error: 'Internal Server Error' }); 
     }
 
   }
