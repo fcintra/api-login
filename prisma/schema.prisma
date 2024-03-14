@@ -14,13 +14,24 @@ datasource db {
 }
 
 model User {
+  id           String         @id @default(uuid())
+  email        String         @unique
+  password     String
+  firstName    String
+  lastName     String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  RefreshToken RefreshToken[]
+}
+
+model RefreshToken {
   id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  firstName String
-  lastName  String
+  userId    String
+  token     String
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  expiresAt DateTime
+
+  user User @relation(fields: [userId], references: [id])
 }
 
 model ErrorLog {
